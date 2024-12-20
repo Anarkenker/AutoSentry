@@ -1,0 +1,1 @@
+inline constexpr int picSize = 1024;
