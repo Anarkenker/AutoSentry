@@ -23,6 +23,8 @@ void PointCloudCallback(uint32_t handle, const uint8_t dev_type, LivoxLidarEther
 			p.x = p_point_data[i].x / 1000.;
 			p.y = p_point_data[i].y / 1000.;
 			p.z = p_point_data[i].z / 1000.;
+			if (hypot(p.x, p.y) < 0.35)
+				continue;
             // p.z = -p.z;
             // p.y = -p.y;
 			if (status)
@@ -55,7 +57,6 @@ void resetPointCloud()
 pcl::PointCloud<pcl::PointXYZ>::Ptr getPointCloud(int maxsize)
 {
 	pcl::PointCloud<pcl::PointXYZ>::Ptr res(new pcl::PointCloud<pcl::PointXYZ>);
-    status = 0;
 	if (cloud->size() < maxsize)
 	{
 		*res = *cloud;
@@ -63,8 +64,9 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr getPointCloud(int maxsize)
 	else
 	{
 		res->insert(res->end(),cloud->rbegin(), cloud->rbegin() + maxsize);
+    	status = 0;
 		cloud->erase(cloud->begin(), cloud->begin() + cloud->size() - maxsize);
+		status = 1;
 	}
-	status = 1;
 	return res;
 }

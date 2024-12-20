@@ -15,29 +15,27 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::Poin
 pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 double scale = 0.2;
 
-std::tuple<float, float, float> match(pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud, double& res)
+Eigen::Matrix4f match(pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud, double& res)
 {
 	voxel_filter.setInputCloud(input_cloud);
 	voxel_filter.filter(*filtered_cloud);
 
 	ndt.setInputSource(filtered_cloud);
 
-	auto t1 = clock();
 	ndt.align(*output_cloud, guess);
-	std::cout << "match use time:" << (clock() - t1) * 1. / CLOCKS_PER_SEC << "s " << " score: " << ndt.getFitnessScore() << '\t';
 
 	auto mat = ndt.getFinalTransformation();
+	res = ndt.getFitnessScore();
 
-	static Eigen::Matrix4f finalmat = Eigen::Matrix4f::Identity();
-	// if (ndt.getFitnessScore() <= 0.1)
+	if (res < .1)
 	{
-		finalmat = mat;
+		guess = mat;
 	}
+
 	// guess(0, 3) = finalmat(0, 3);
 	// guess(1, 3) = finalmat(1, 3);
-	guess = finalmat;
 
-	return {finalmat(0, 3), finalmat(1, 3), atan2(finalmat(1, 0), finalmat(0, 0))};
+	return guess;
 }
 
 void initMatch(std::string globalPointCloudPath, double approX, double approY, double approTheta)

@@ -12,11 +12,18 @@ std::pair<double, double> invtrans(double x, double y)
     return {x / rate + minx, y / rate + miny};
 }
 
-void drawSquare(cv::Mat &img, int x, int y, int r)
+void drawCircle(cv::Mat &img, int x, int y, int r, cv::Vec3b color)
 {
     for (int i = -r; i <= r; i++)
         for (int j = -r; j <= r; j++)
-            img.at<cv::Vec3b>(x + i, y + j) = {255,255,0};
+        {
+            int nx = x + i;
+            int ny = y + i;
+            if (nx < 0 || ny < 0 || nx >= img.rows || ny >= img.cols)
+                continue;
+            if (hypot(i, j) <= r)
+                img.at<cv::Vec3b>(x + i, y + j) = color;
+        }
 }
 
 void initPCD(pcl::PointCloud<pcl::PointXYZ>::Ptr ptr, int picSize)
@@ -34,6 +41,9 @@ void initPCD(pcl::PointCloud<pcl::PointXYZ>::Ptr ptr, int picSize)
     // cout << "minx " << minx << " maxx" << maxx << "\nminy" << miny << " maxy" << maxy << endl;
 
     rate = (picSize - 1) / std::max(maxx - minx, maxy - miny);
+
+    std::cout << 1 / rate << "m per pixel" << std::endl;
+
 }
 
 
