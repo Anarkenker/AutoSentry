@@ -22,7 +22,7 @@ struct Status
     }
 };
 
-float heuristic(Point a, Point b)
+float distance(Point a, Point b)
 {
     return hypot(a.x - b.x, a.y - b.y);
 }
@@ -37,27 +37,70 @@ struct myless : public binary_function<Point, Point, bool>
     }
 };
 
-bool isObstacle(int i, int j)
+bool isObstacle(Point u)
 {
-    Scalar res = img.at<Vec3b>(i, j);
+    Scalar res = img.at<Vec3b>(u.x, u.y);
     return res[0] || res[1] || res[2];
 }
 
-// A*算法实现
-vector<Point> astar(Point start, Point end, double timeout = 1e9)
+vector<Point> getNeighbors(Point x, bool filterObstacle = true)
+{
+    static vector<Point> direction = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+    vector<Point> neighbors;
+    for (auto dir : direction)
+    {
+        Point neighbor = x + dir;
+        if (neighbor.x < 0 || neighbor.x >= picSize || neighbor.y < 0 || neighbor.y >= picSize)
+            continue;
+        if (filterObstacle && isObstacle(neighbor))
+            continue;
+        neighbors.push_back(neighbor);
+    }
+    return neighbors;
+}
+
+int costMap[picSize][picSize];
+void setTarget(Point target)
 {
     auto timeStart = chrono::system_clock::now();
-    if (isObstacle(end.x, end.y))
+    imgFixed.copyTo(img);
+    fill(&costMap[0][0], &costMap[0][0] + picSize * picSize, 1e9);
+
+    costMap[target.x][target.y] = 0;
+    queue<pair<Point, int>> q;
+    q.push({target, 0});
+    while (q.size())
+    {
+        auto [x, c] = q.front();
+        q.pop();
+
+        for (auto neighbor : getNeighbors(x))
+        {
+            if (costMap[neighbor.x][neighbor.y] < 1e9)
+                continue;
+
+            costMap[neighbor.x][neighbor.y] = c + 1;
+            q.push({neighbor, c + 1});
+        }
+    }
+    cout << "set target use time:" << chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - timeStart).count() << "ms\t" << flush;
+}
+
+// A*算法实现
+vector<Point> astar(Point start, Point end)
+{
+    auto timeStart = chrono::system_clock::now();
+    if (isObstacle(end))
         return {};
 
-    if (isObstacle(start.x, start.y))
+    if (isObstacle(start))
     {
         for (int dt = 1; dt <= 3; dt++)
         {
             for (int di = -dt; di <= dt; di++)
                 for (int dj = -dt; dj <= dt; dj++)
                 {
-                    if (!isObstacle(start.x + di, start.y + dj))
+                    if (!isObstacle({start.x + di, start.y + dj}))
                     {
                         start.x += di;
                         start.y += dj;
@@ -66,16 +109,15 @@ vector<Point> astar(Point start, Point end, double timeout = 1e9)
                 }
         }
         return {};
-
     }
-    finish:;
+finish:;
 
     priority_queue<Status, vector<Status>, greater<Status>> openSet;
 
     set<Point, myless> vis;
     map<Point, Point, myless> from;
 
-    openSet.emplace(start, 0, heuristic(start, end));
+    openSet.emplace(start, 0, costMap[start.x][start.y]);
 
     while (!openSet.empty())
     {
@@ -96,28 +138,18 @@ vector<Point> astar(Point start, Point end, double timeout = 1e9)
             reverse(path.begin(), path.end());
             return path;
         }
-        if (chrono::duration_cast<chrono::seconds>(chrono::system_clock::now() - timeStart).count() > timeout)
-            return {};
 
-        // 邻居方向
-        vector<Point> neighbors = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
-
-        for (const auto &dir : neighbors)
+        for (auto neighbor : getNeighbors(current.pos))
         {
-            Point neighbor = current.pos + dir;
-
             // 确保邻居在图像边界内且可通行
-            if (neighbor.x < 0 || neighbor.x >= img.cols ||
-                neighbor.y < 0 || neighbor.y >= img.rows ||
-                isObstacle(neighbor.x, neighbor.y) ||
-                vis.count(neighbor))
+            if (vis.count(neighbor))
             {
                 continue;
             }
             vis.insert(neighbor);
 
             float gCost = current.g + 1; // 假设每一步的成本为1
-            float hCost = heuristic(neighbor, end);
+            float hCost = costMap[neighbor.x][neighbor.y];
 
             openSet.emplace(neighbor, gCost, hCost);
             from[neighbor] = current.pos;
@@ -146,7 +178,7 @@ bool line_of_sight(const Point &p1, const Point &p2)
             cout << "error line_of_sight" << flush;
             return false;
         }
-        if (isObstacle(x0, y0))
+        if (isObstacle({x0, y0}))
             return false; // 障碍物
         if (x0 == x1 && y0 == y1)
             break;
@@ -198,7 +230,7 @@ double route_planning(Point start, Point end, deque<pcl::PointXYZ> &realtimeObst
 
     addObstacle(realtimeObstacle);
     clock_t s = clock();
-    vector<Point> path = astar(start, end, .2);
+    vector<Point> path = astar(start, end);
 
     cout << "a star use time" << (clock() - s) * 1. / CLOCKS_PER_SEC << '\t' << flush;
 
@@ -206,7 +238,6 @@ double route_planning(Point start, Point end, deque<pcl::PointXYZ> &realtimeObst
     {
         cout << "not find path\t" << flush;
         imwrite("../not find path.png", img);
-        cout << "not find path\t" << flush;
         return std::nan("");
     }
 

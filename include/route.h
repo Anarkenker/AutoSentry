@@ -9,3 +9,4 @@
 
 void initRoute(const std::string &obstaclePath);
 double route_planning(cv::Point start, cv::Point end, std::deque<pcl::PointXYZ>& realtimeObstacle);
+void setTarget(cv::Point target);
