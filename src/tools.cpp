@@ -1,4 +1,5 @@
 #include "tools.h"
+using namespace std;
 
 inline double minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
 inline double rate;
@@ -47,3 +48,14 @@ void initPCD(pcl::PointCloud<pcl::PointXYZ>::Ptr ptr, int picSize)
 }
 
 
+thread_local std::chrono::_V2::system_clock::time_point start_time;
+
+std::chrono::_V2::system_clock::time_point clock_start()
+{
+    return start_time = chrono::system_clock::now();
+}
+
+double get_clock_time()
+{
+    return chrono::duration_cast<chrono::duration<double>>(chrono::system_clock::now() - start_time).count();
+}

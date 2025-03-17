@@ -4,7 +4,7 @@
 using namespace std;
 using namespace cv;
 
-Mat img;
+Mat imgObs;
 Mat imgFixed;
 
 struct Status
@@ -37,10 +37,10 @@ struct myless : public binary_function<Point, Point, bool>
     }
 };
 
-bool isObstacle(Point u)
+int getObstacleLevel(Point u)
 {
-    Scalar res = img.at<Vec3b>(u.x, u.y);
-    return res[0] || res[1] || res[2];
+    uchar res = imgObs.at<uchar>(u.x, u.y);
+    return res;
 }
 
 vector<Point> getNeighbors(Point x, bool filterObstacle = true)
@@ -52,7 +52,7 @@ vector<Point> getNeighbors(Point x, bool filterObstacle = true)
         Point neighbor = x + dir;
         if (neighbor.x < 0 || neighbor.x >= picSize || neighbor.y < 0 || neighbor.y >= picSize)
             continue;
-        if (filterObstacle && isObstacle(neighbor))
+        if (filterObstacle && getObstacleLevel(neighbor) == 0xff)
             continue;
         neighbors.push_back(neighbor);
     }
@@ -63,7 +63,6 @@ int costMap[picSize][picSize];
 void setTarget(Point target)
 {
     auto timeStart = chrono::system_clock::now();
-    imgFixed.copyTo(img);
     fill(&costMap[0][0], &costMap[0][0] + picSize * picSize, 1e9);
 
     costMap[target.x][target.y] = 0;
@@ -90,17 +89,17 @@ void setTarget(Point target)
 vector<Point> astar(Point start, Point end)
 {
     auto timeStart = chrono::system_clock::now();
-    if (isObstacle(end))
+    if (getObstacleLevel(end) == 255)
         return {};
 
-    if (isObstacle(start))
+    if (getObstacleLevel(start) == 255)
     {
         for (int dt = 1; dt <= 3; dt++)
         {
             for (int di = -dt; di <= dt; di++)
                 for (int dj = -dt; dj <= dt; dj++)
                 {
-                    if (!isObstacle({start.x + di, start.y + dj}))
+                    if (getObstacleLevel({start.x + di, start.y + dj}) < 255)
                     {
                         start.x += di;
                         start.y += dj;
@@ -148,7 +147,7 @@ finish:;
             }
             vis.insert(neighbor);
 
-            float gCost = current.g + 1; // 假设每一步的成本为1
+            float gCost = current.g + getObstacleLevel(neighbor);
             float hCost = costMap[neighbor.x][neighbor.y];
 
             openSet.emplace(neighbor, gCost, hCost);
@@ -178,7 +177,7 @@ bool line_of_sight(const Point &p1, const Point &p2)
             cout << "error line_of_sight" << flush;
             return false;
         }
-        if (isObstacle({x0, y0}))
+        if (getObstacleLevel({x0, y0}))
             return false; // 障碍物
         if (x0 == x1 && y0 == y1)
             break;
@@ -197,9 +196,32 @@ bool line_of_sight(const Point &p1, const Point &p2)
     return true;
 }
 
+void drawCircleObstacle(int x, int y, int r, int extr)
+{
+    r += extr;
+    for (int i = -r; i <= r; i++)
+        for (int j = -r; j <= r; j++)
+        {
+            int nx = x + i;
+            int ny = y + i;
+            if (nx < 0 || ny < 0 || nx >= imgObs.rows || ny >= imgObs.cols)
+                continue;
+
+            int curr = hypot(i, j);
+            if (curr <= r - extr)
+            {
+                imgObs.at<uchar>(x + i, y + j) = 0xff;
+            }
+            else if (curr <= r)
+            {
+                imgObs.at<uchar>(x + i, y + j) = max(imgObs.at<uchar>(x + i, y + j), uchar(r - curr));
+            }
+        }
+}
+
 void addObstacle(deque<pcl::PointXYZ> &obstacle)
 {
-    map<pair<int, int>, int> pointcnt;
+    unordered_map<int, int> pointcnt;
     mtx.lock();
     cout << obstacle.size() << '\t';
     for (int i = 0; i < obstacle.size(); i++)
@@ -208,16 +230,20 @@ void addObstacle(deque<pcl::PointXYZ> &obstacle)
         if (p.z > 0.6)
             continue;
         auto [x, y] = trans(p.x, p.y);
-        pointcnt[{x, y}]++;
+        pointcnt[(x << 16) | y]++;
     }
     mtx.unlock();
 
-    for (auto &[p, cnt] : pointcnt)
+    vector<pair<int,int>> vpointcnt(pointcnt.begin(), pointcnt.end());
+
+#pragma omp parallel for
+    for (auto &[p, cnt] : vpointcnt)
     {
-        if (cnt < 2)
+        if (cnt < 4)
             continue;
-        auto [x, y] = p;
-        drawCircle(img, x, y, 20, {0, 255, 255});
+        int x = p >> 16;
+        int y = p & ((1 << 16) - 1);
+        drawCircleObstacle(x, y, 15, 10);
     }
 }
 
@@ -226,42 +252,43 @@ double route_planning(Point start, Point end, deque<pcl::PointXYZ> &realtimeObst
     // swap(start.x, start.y);
     // swap(end.x, end.y);
     // cout << "running A*: (" << start.x << "," << start.y << ") -> (" << end.x << "," << end.y << ")" << endl;
-    imgFixed.copyTo(img);
+    imgFixed.copyTo(imgObs);
 
+    clock_start();
     addObstacle(realtimeObstacle);
-    clock_t s = clock();
     vector<Point> path = astar(start, end);
 
-    cout << "a star use time" << (clock() - s) * 1. / CLOCKS_PER_SEC << '\t' << flush;
+    cout << "a star use time" << get_clock_time() << '\t' << flush;
 
     if (path.size() < 2)
     {
         cout << "not find path\t" << flush;
-        imwrite("../not find path.png", img);
+        imwrite("../not find path.png", imgObs);
         return std::nan("");
     }
 
     vector<Point> fixedPath;
-    auto cur = path.front();
-    fixedPath.push_back(cur);
-    while (cur != path.back())
+    auto curit = path.begin();
+    fixedPath.push_back(*curit);
+    while (curit != path.end())
     {
         bool fg = false;
-        for (auto it = path.rbegin(); it != path.rend(); it++)
+        for (auto it = path.rbegin(); *it != *curit; it++)
         {
-            if (line_of_sight(cur, *it))
+            if (line_of_sight(*curit, *it))
             {
                 fixedPath.push_back(*it);
-                cur = *it;
+                curit = it.base();
                 fg = true;
                 break;
             }
         }
         if (fg)
+        {
             continue;
-        cout << "fix failed\t" << flush;
-        fixedPath.push_back(path.back());
-        break;
+        }
+        fixedPath.push_back(*curit);
+        curit++;
     }
     path = fixedPath;
 
@@ -273,20 +300,18 @@ double route_planning(Point start, Point end, deque<pcl::PointXYZ> &realtimeObst
     for (auto p : path)
     {
         swap(p.x, p.y);
-        line(img, lastp, p, {0, 255, 0}, 3);
+        line(imgObs, lastp, p, 200, 3);
         lastp = p;
     }
-
-    drawCircle(img, path[0].x, path[0].y, 2, {255, 255, 0});
-    drawCircle(img, path[1].x, path[1].y, 2, {0, 255, 255});
     static int cnt;
     if (cnt++ % 10 == 0)
-        imwrite("../a.png", img);
+        imwrite("../a.png", imgObs);
 
     return atan2(path[1].y - path[0].y, path[1].x - path[0].x);
 }
 
 void initRoute(const string &obstaclePath)
 {
-    imgFixed = imread(obstaclePath);
+    imgFixed = imread(obstaclePath, 0);
+    imgFixed.copyTo(imgObs);
 }

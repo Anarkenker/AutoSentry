@@ -18,15 +18,15 @@ vector<Point> dest{
 
 double getfps()
 {
-    static thread_local deque<int> q;
-    auto cur = clock();
+    static thread_local deque<std::chrono::_V2::system_clock::time_point> q;
+    auto cur = clock_start();
     q.push_back(cur);
 
-    while (cur - q.front() > CLOCKS_PER_SEC)
+    while (std::chrono::duration_cast<std::chrono::milliseconds>(cur - q.front()).count() > 1000)
         q.pop_front();
     if (q.size() == 1)
         return 0;
-    return q.size() * CLOCKS_PER_SEC * 1. / (cur - q.front());
+    return q.size() / (std::chrono::duration_cast<std::chrono::milliseconds>(cur - q.front()).count() / 1000.);
 }
 
 double x, y, t, score;
