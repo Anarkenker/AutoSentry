@@ -8,9 +8,9 @@
 
 using namespace std;
 using namespace cv;
-int nx = 369;
-int ny = 581;
-double theta = -0.252242;
+int nx = 216;
+int ny = 556;
+double theta = -0.318748;
 
 vector<Point> dest{
     {634,455},
@@ -82,6 +82,7 @@ int main()
     // resetPointCloud();
 
     auto curDest = dest.begin();
+    setTarget(*curDest);
     thread _{locate};
     while (true)
     {
@@ -115,7 +116,7 @@ int main()
                 curDest = dest.begin();
         }
 
-        // continue;
+        continue;
         static int lstTime = clock();
         int curTime = clock();
         double deltaTime = (curTime - lstTime) * 1. / CLOCKS_PER_SEC;
