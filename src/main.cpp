@@ -74,6 +74,13 @@ int main()
     // signal(SIGTERM, endCtrl);
     // signal(SIGSEGV, endCtrl);
     initLidar("../mid360_config.json");
+
+    // this_thread::sleep_for(10s);
+    // auto ptr = getPointCloud();
+    // cout << ptr->size() << endl;
+    // pcl::io::savePCDFileBinaryCompressed("d.pcd", *ptr);
+    // return 0;
+
     initRoute("../obstacle.png");
     initCtrl();
     initMatch("../scans.pcd", nx, ny, theta);

@@ -2,7 +2,7 @@
 #include <atomic>
 
 using namespace std;
-atomic_bool status;
+mutex lidar_mtx;
 pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 void PointCloudCallback(uint32_t handle, const uint8_t dev_type, LivoxLidarEthernetPacket *data, void *client_data)
 {
@@ -27,8 +27,9 @@ void PointCloudCallback(uint32_t handle, const uint8_t dev_type, LivoxLidarEther
 				continue;
             // p.z = -p.z;
             // p.y = -p.y;
-			if (status)
-            	cloud->push_back(p);
+			lidar_mtx.lock();
+			cloud->push_back(fixRotate(p));
+			lidar_mtx.unlock();
 		}
 	}
 }
@@ -46,7 +47,6 @@ void initLidar(const string& path)
 	}
 
 	SetLivoxLidarPointCloudCallBack(PointCloudCallback, nullptr);
-    status = 1;
 }
 
 void resetPointCloud()
@@ -57,6 +57,7 @@ void resetPointCloud()
 pcl::PointCloud<pcl::PointXYZ>::Ptr getPointCloud(int maxsize)
 {
 	pcl::PointCloud<pcl::PointXYZ>::Ptr res(new pcl::PointCloud<pcl::PointXYZ>);
+	lock_guard l(lidar_mtx);
 	if (cloud->size() < maxsize)
 	{
 		*res = *cloud;
@@ -64,9 +65,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr getPointCloud(int maxsize)
 	else
 	{
 		res->insert(res->end(),cloud->rbegin(), cloud->rbegin() + maxsize);
-    	status = 0;
 		cloud->erase(cloud->begin(), cloud->begin() + cloud->size() - maxsize);
-		status = 1;
 	}
 	return res;
 }
