@@ -5,6 +5,8 @@
 #include "route.h"
 #include "control.h"
 #include "config.h"
+#include "socket_server.hpp"
+#include "logger.h"
 
 using namespace std;
 using namespace cv;
@@ -84,12 +86,13 @@ int main()
     auto curDest = dest.begin();
     setTarget(*curDest);
     thread _{locate};
+
     while (true)
     {
         // startTime += 100ms;
         // this_thread::sleep_until(startTime);
 
-        cout << score << '\t' << x << '\t' << y << '\t' << t << '\t' << flush;
+        log_info(score, x, y, t);
 
         Point start;
         tie(start.x, start.y) = trans(x, y);
@@ -108,7 +111,8 @@ int main()
                 ddt = ddt + 2 * M_PI;
         }
 
-        cout << dis << '\t' << ddt << '\t' << getfps() << '\t' << locateFPS << endl;
+        log_info(dis, ddt, getfps(), locateFPS);
+        log_new_line();
         if (dis < .5)
         {
             curDest++;

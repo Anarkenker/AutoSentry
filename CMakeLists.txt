@@ -4,6 +4,9 @@ find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(OpenMP REQUIRED)
 
+set(CMAKE_CXX_STANDARD 20)
+# add_compile_definitions(NO_LOG_INFO)
+
 include_directories(${PCL_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS} ${OpenCV_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})

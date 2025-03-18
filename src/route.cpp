@@ -1,6 +1,7 @@
 #include "route.h"
 #include "config.h"
 #include "tools.h"
+#include "logger.h"
 using namespace std;
 using namespace cv;
 
@@ -223,7 +224,7 @@ void addObstacle(deque<pcl::PointXYZ> &obstacle)
 {
     unordered_map<int, int> pointcnt;
     mtx.lock();
-    cout << obstacle.size() << '\t';
+    log_info(obstacle.size());
     for (int i = 0; i < obstacle.size(); i++)
     {
         auto p = obstacle[i];
@@ -258,11 +259,11 @@ double route_planning(Point start, Point end, deque<pcl::PointXYZ> &realtimeObst
     addObstacle(realtimeObstacle);
     vector<Point> path = astar(start, end);
 
-    cout << "a star use time" << get_clock_time() << '\t' << flush;
+    log_info("a star use time", get_clock_time());
 
     if (path.size() < 2)
     {
-        cout << "not find path\t" << flush;
+        log_info("not find path");
         imwrite("../not find path.png", imgObs);
         return std::nan("");
     }
@@ -292,7 +293,7 @@ double route_planning(Point start, Point end, deque<pcl::PointXYZ> &realtimeObst
     }
     path = fixedPath;
 
-    cout << "find path length " << path.size() << '\t' << flush;
+    log_info("find path length ", path.size());
 
     // 在图像上绘制路径
     auto lastp = path.front();
