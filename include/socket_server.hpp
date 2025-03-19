@@ -15,6 +15,7 @@ class socket_server
 private:
     int sockfd;
     sockaddr_in serv_addr;
+    sockaddr_in cli_addr;
     char buffer[256];
     std::function<void(const T&)> Fcallback;
     std::jthread thread;
@@ -24,7 +25,6 @@ private:
         while (true)
         {
             memset(buffer, 0, sizeof(buffer));
-            sockaddr_in cli_addr;
             socklen_t cli_addr_len = sizeof(cli_addr);
             auto n = recvfrom(sockfd, buffer, 256, MSG_WAITALL, (sockaddr *)&cli_addr, &cli_addr_len);
             if (n > 0)
@@ -55,6 +55,18 @@ public:
             printf("can't bind socket fd with port number");
         }
         
+    }
+
+    template<typename PKG>
+    void send(const PKG& pkg)
+    {
+        auto n = sendto(
+            sockfd,
+            (const char *)(&pkg),
+            sizeof(pkg),
+            MSG_CONFIRM,
+            (const struct sockaddr *)&cli_addr,
+            sizeof(cli_addr));
     }
 };
 

@@ -56,11 +56,12 @@ void locate()
         mtx.unlock();
         x = transMat(0, 3);
         y = transMat(1, 3);
-        t = atan2((transMat(1, 0) - transMat(0, 1)) / 2, (transMat(0, 0) + transMat(1, 1)) / 2);
+        t = theta + getDeltaYaw();
         locateFPS = getfps();
         // this_thread::sleep_for(10ms);
     }
 }
+
 
 void endCtrl(int sig)
 {
@@ -135,13 +136,11 @@ int main()
 
         if (score > .1 || isnan(ddt))
         {
-            sendCtrl(deltaTime / 2 * M_PI, 0);
+            // sendCtrl(deltaTime / 2 * M_PI, 1);
             continue;
         }
 
-        sendCtrl((ddt) * deltaTime / 2, 0);
-        if (abs(ddt) < .5)
-            sendCtrl(0, 0.5);
+        sendCtrl(ddt, 1);
 
         // this_thread::sleep_for(1s);
     }

@@ -4,6 +4,12 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include "socket_server.hpp"
 
-void sendCtrl(double yaw,double v);
-void initCtrl();
+struct SendNavigationInfo
+{
+    uint8_t header;
+    float vx;
+    float vy;
+} __attribute__((packed));
+void sendControl(double angle, double speed);
