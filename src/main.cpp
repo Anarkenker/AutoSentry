@@ -10,13 +10,16 @@
 
 using namespace std;
 using namespace cv;
-int nx = 216;
-int ny = 556;
-double theta = -0.318748;
+// int nx = 386;
+// int ny = 581;
+// double theta = -0.318748;
+int nx = 185;
+int ny = 266;
+double theta = 1.62171;
 
 vector<Point> dest{
-    {634,455},
-    {369, 581}};
+    {362,449},
+    {185,264}};
 
 double getfps()
 {
@@ -32,7 +35,6 @@ double getfps()
 }
 
 double x, y, t, score;
-Eigen::Matrix4f transMat;
 deque<pcl::PointXYZ> realtimeObstacle;
 double locateFPS;
 void locate()
@@ -40,13 +42,13 @@ void locate()
     while (true)
     {
         auto p = getPointCloud(10000);
-        transMat = match(p, score);
+        Eigen::Matrix4f& transMat = match(p, score);
         mtx.lock();
         for (auto pt : p->points)
         {
             double dis = hypot(pt.x, pt.y, pt.z);
-            if (dis > 2)
-                continue;
+            // if (dis > 2)
+            //     continue;
             Eigen::Vector4f transPoint{pt.x, pt.y, pt.z, 1};
             transPoint = transMat * transPoint;
             realtimeObstacle.push_back({transPoint[0], transPoint[1], transPoint[2]});
@@ -56,7 +58,7 @@ void locate()
         mtx.unlock();
         x = transMat(0, 3);
         y = transMat(1, 3);
-        t = theta + getDeltaYaw();
+        t = atan2((transMat(1, 0) - transMat(0, 1)) / 2, (transMat(0, 0) + transMat(1, 1)) / 2) + getDeltaYaw();
         locateFPS = getfps();
         // this_thread::sleep_for(10ms);
     }
@@ -65,13 +67,13 @@ void locate()
 
 void endCtrl(int sig)
 {
-    sendCtrl(0, 0);
+    sendControl(0, 0);
     exit(0);
 }
 double rotate = 0;
 int main()
 {
-    signal(SIGINT, endCtrl);
+    // signal(SIGINT, endCtrl);
     // signal(SIGTERM, endCtrl);
     // signal(SIGSEGV, endCtrl);
     initLidar("../mid360_config.json");
@@ -82,9 +84,10 @@ int main()
     // pcl::io::savePCDFileBinaryCompressed("d.pcd", *ptr);
     // return 0;
 
-    initRoute("../obstacle.png");
-    initCtrl();
-    initMatch("../scans.pcd", nx, ny, theta);
+    // initRoute("../obstacle.png");
+    // initMatch("../scans.pcd", nx, ny, theta);
+    initRoute("../8floor-edit.png");
+    initMatch("../8floor.pcd", nx, ny, theta);
     cout << "finish init" << endl;
 
     cout << fixed << setprecision(4);
@@ -119,13 +122,14 @@ int main()
                 ddt = ddt + 2 * M_PI;
         }
 
-        log_info(dis, ddt, getfps(), locateFPS);
+        log_info(dis, dt, ddt, getfps(), locateFPS);
         log_new_line();
-        if (dis < .5)
+        if (dis < .3)
         {
             curDest++;
             if (curDest == dest.end())
                 curDest = dest.begin();
+            setTarget(*curDest);
         }
 
         continue;
@@ -136,11 +140,11 @@ int main()
 
         if (score > .1 || isnan(ddt))
         {
-            // sendCtrl(deltaTime / 2 * M_PI, 1);
+            // sendControl(deltaTime / 2 * M_PI, 1);
             continue;
         }
 
-        sendCtrl(ddt, 1);
+        sendControl(ddt, 0.5);
 
         // this_thread::sleep_for(1s);
     }

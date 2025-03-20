@@ -228,7 +228,7 @@ void addObstacle(deque<pcl::PointXYZ> &obstacle)
     for (int i = 0; i < obstacle.size(); i++)
     {
         auto p = obstacle[i];
-        if (p.z > 0.6)
+        if (p.z > 0.4)
             continue;
         auto [x, y] = trans(p.x, p.y);
         pointcnt[(x << 16) | y]++;
@@ -240,11 +240,11 @@ void addObstacle(deque<pcl::PointXYZ> &obstacle)
 #pragma omp parallel for
     for (auto &[p, cnt] : vpointcnt)
     {
-        if (cnt < 4)
+        if (cnt < 2)
             continue;
         int x = p >> 16;
         int y = p & ((1 << 16) - 1);
-        drawCircleObstacle(x, y, 15, 10);
+        drawCircleObstacle(x, y, 5, 10);
     }
 }
 
@@ -265,6 +265,8 @@ double route_planning(Point start, Point end, deque<pcl::PointXYZ> &realtimeObst
     {
         log_info("not find path");
         imwrite("../not find path.png", imgObs);
+        imshow("a", imgObs);
+        waitKey(1);
         return std::nan("");
     }
 
@@ -302,13 +304,27 @@ double route_planning(Point start, Point end, deque<pcl::PointXYZ> &realtimeObst
     {
         swap(p.x, p.y);
         line(imgObs, lastp, p, 200, 3);
+        // drawCircle(imgob)
         lastp = p;
+    }
+    for (auto p : path)
+    {
+        swap(p.x, p.y);
+        imgObs.at<uchar>(p) = 100;
     }
     static int cnt;
     if (cnt++ % 10 == 0)
         imwrite("../a.png", imgObs);
+    imshow("a", imgObs);
+    waitKey(1);
+    int nxt_step = 1;
+    for (;nxt_step < path.size(); nxt_step++)
+    {
+        if (hypot(path[nxt_step].y - path[0].y, path[nxt_step].x - path[0].x) > 3)
+            break;
+    }
 
-    return atan2(path[1].y - path[0].y, path[1].x - path[0].x);
+    return atan2(path[nxt_step].y - path[0].y, path[nxt_step].x - path[0].x);
 }
 
 void initRoute(const string &obstaclePath)

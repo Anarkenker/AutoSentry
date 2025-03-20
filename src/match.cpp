@@ -15,7 +15,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::Poin
 pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 double scale = 0.2;
 
-Eigen::Matrix4f match(pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud, double& res)
+Eigen::Matrix4f& match(pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud, double& res)
 {
 	voxel_filter.setInputCloud(input_cloud);
 	voxel_filter.filter(*filtered_cloud);
