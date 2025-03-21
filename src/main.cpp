@@ -42,6 +42,8 @@ void locate()
     while (true)
     {
         auto p = getPointCloud(10000);
+        if (p->empty())
+            continue;
         Eigen::Matrix4f& transMat = match(p, score);
         mtx.lock();
         for (auto pt : p->points)
@@ -78,7 +80,7 @@ int main()
     // signal(SIGSEGV, endCtrl);
     initLidar("../mid360_config.json");
 
-    // this_thread::sleep_for(10s);
+    // this_thread::sleep_for(5s);
     // auto ptr = getPointCloud();
     // cout << ptr->size() << endl;
     // pcl::io::savePCDFileBinaryCompressed("d.pcd", *ptr);
