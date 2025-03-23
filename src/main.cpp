@@ -43,16 +43,27 @@ double getfps()
 double x, y, t, score;
 deque<pcl::PointXYZ> realtimeObstacle;
 double locateFPS;
+int matchPointNum = 30000;
+int obstacleNum = 60000;
 void locate()
 {
     while (true)
     {
-        auto p = getPointCloud(10000);
-        if (p->empty())
+        static pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud(new pcl::PointCloud<pcl::PointXYZ>);
+        auto p = getPointCloud();
+        for (auto pt : p.points)
+        {
+            pointCloud->push_back(pt);
+        }
+        if (pointCloud->size() > matchPointNum)
+        {
+            pointCloud->erase(pointCloud->begin(), pointCloud->begin() + pointCloud->size() - matchPointNum);
+        }
+        if (pointCloud->empty())
             continue;
-        Eigen::Matrix4f& transMat = match(p, score);
+        Eigen::Matrix4f& transMat = match(pointCloud, score);
         mtx.lock();
-        for (auto pt : p->points)
+        for (auto pt : p.points)
         {
             double dis = hypot(pt.x, pt.y, pt.z);
             // if (dis > 2)
@@ -61,7 +72,7 @@ void locate()
             transPoint = transMat * transPoint;
             realtimeObstacle.push_back({transPoint[0], transPoint[1], transPoint[2]});
         }
-        while (realtimeObstacle.size() > 20000)
+        while (realtimeObstacle.size() > obstacleNum)
             realtimeObstacle.pop_front();
         mtx.unlock();
         x = transMat(0, 3);
@@ -111,6 +122,8 @@ int main(int argc, char const *argv[])
     setTarget(*curDest);
     thread _{locate};
 
+    int stableCnt = 0;
+
     while (true)
     {
         // startTime += 100ms;
@@ -146,14 +159,15 @@ int main(int argc, char const *argv[])
         }
 
         // continue;
-        static int lstTime = clock();
-        int curTime = clock();
-        double deltaTime = (curTime - lstTime) * 1. / CLOCKS_PER_SEC;
-        lstTime = curTime;
 
         if (score > .1 || isnan(ddt))
         {
+            stableCnt = 0;
             // sendControl(deltaTime / 2 * M_PI, 1);
+            continue;
+        }
+        if (++stableCnt < 10)
+        {
             continue;
         }
 

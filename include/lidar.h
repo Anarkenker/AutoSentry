@@ -9,4 +9,4 @@
 
 void initLidar(const std::string& path);
 void resetPointCloud();
-pcl::PointCloud<pcl::PointXYZ>::Ptr getPointCloud(int maxsize = INT_MAX);
+pcl::PointCloud<pcl::PointXYZ> getPointCloud();

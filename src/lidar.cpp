@@ -15,6 +15,7 @@ void PointCloudCallback(uint32_t handle, const uint8_t dev_type, LivoxLidarEther
 	{
 		// cout << "high data" << endl;
 		LivoxLidarCartesianHighRawPoint *p_point_data = (LivoxLidarCartesianHighRawPoint *)data->data;
+		lock_guard l(lidar_mtx);
 		for (uint32_t i = 0; i < data->dot_num; i++)
 		{
 			if (p_point_data[i].x == 0 && p_point_data[i].y == 0 && p_point_data[i].z == 0)
@@ -27,9 +28,7 @@ void PointCloudCallback(uint32_t handle, const uint8_t dev_type, LivoxLidarEther
 				continue;
             // p.z = -p.z;
             // p.y = -p.y;
-			lidar_mtx.lock();
 			cloud->push_back(fixRotate(p));
-			lidar_mtx.unlock();
 		}
 	}
 }
@@ -54,18 +53,12 @@ void resetPointCloud()
     cloud->clear();
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr getPointCloud(int maxsize)
+pcl::PointCloud<pcl::PointXYZ> getPointCloud()
 {
-	pcl::PointCloud<pcl::PointXYZ>::Ptr res(new pcl::PointCloud<pcl::PointXYZ>);
-	lock_guard l(lidar_mtx);
-	if (cloud->size() < maxsize)
-	{
-		*res = *cloud;
-	}
-	else
-	{
-		res->insert(res->end(),cloud->rbegin(), cloud->rbegin() + maxsize);
-		cloud->erase(cloud->begin(), cloud->begin() + cloud->size() - maxsize);
-	}
+	pcl::PointCloud<pcl::PointXYZ> res;
+	lidar_mtx.lock();
+	res = *cloud;
+	cloud->clear();
+	lidar_mtx.unlock();
 	return res;
 }
