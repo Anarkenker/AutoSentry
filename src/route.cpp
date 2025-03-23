@@ -7,6 +7,7 @@ using namespace cv;
 
 Mat imgObs;
 Mat imgFixed;
+bool showImg = false;
 
 struct Status
 {
@@ -95,7 +96,7 @@ vector<Point> astar(Point start, Point end)
 
     if (getObstacleLevel(start) == 255)
     {
-        for (int dt = 1; dt <= 3; dt++)
+        for (int dt = 1; dt <= meter2pixel(1); dt++)
         {
             for (int di = -dt; di <= dt; di++)
                 for (int dj = -dt; dj <= dt; dj++)
@@ -215,7 +216,7 @@ void drawCircleObstacle(int x, int y, int r, int extr)
             }
             else if (curr <= r)
             {
-                imgObs.at<uchar>(x + i, y + j) = max(imgObs.at<uchar>(x + i, y + j), uchar(r - curr));
+                imgObs.at<uchar>(x + i, y + j) = max((int)imgObs.at<uchar>(x + i, y + j), 2 * uchar(r - curr));
             }
         }
 }
@@ -244,7 +245,7 @@ void addObstacle(deque<pcl::PointXYZ> &obstacle)
             continue;
         int x = p >> 16;
         int y = p & ((1 << 16) - 1);
-        drawCircleObstacle(x, y, 5, 10);
+        drawCircleObstacle(x, y, meter2pixel(0.35), meter2pixel(0.15));
     }
 }
 
@@ -257,7 +258,20 @@ double route_planning(Point start, Point end, deque<pcl::PointXYZ> &realtimeObst
 
     clock_start();
     addObstacle(realtimeObstacle);
+    static vector<Point> last_path;
+    for (auto p : last_path)
+    {
+        costMap[p.x][p.y] -= 10;
+    }
+
     vector<Point> path = astar(start, end);
+
+    for (auto p : last_path)
+    {
+        costMap[p.x][p.y] += 10;
+    }
+
+    last_path = path;
 
     log_info("a star use time", get_clock_time());
 
@@ -265,8 +279,11 @@ double route_planning(Point start, Point end, deque<pcl::PointXYZ> &realtimeObst
     {
         log_info("not find path");
         imwrite("../not find path.png", imgObs);
-        imshow("a", imgObs);
-        waitKey(1);
+        if (showImg)
+        {
+            imshow("a", imgObs);
+            waitKey(1);
+        }
         return std::nan("");
     }
 
@@ -303,7 +320,7 @@ double route_planning(Point start, Point end, deque<pcl::PointXYZ> &realtimeObst
     for (auto p : path)
     {
         swap(p.x, p.y);
-        line(imgObs, lastp, p, 200, 3);
+        line(imgObs, lastp, p, 200, 1);
         // drawCircle(imgob)
         lastp = p;
     }
@@ -315,8 +332,11 @@ double route_planning(Point start, Point end, deque<pcl::PointXYZ> &realtimeObst
     static int cnt;
     if (cnt++ % 10 == 0)
         imwrite("../a.png", imgObs);
-    imshow("a", imgObs);
-    waitKey(1);
+    if (showImg)
+    {
+        imshow("a", imgObs);
+        waitKey(1);
+    }
     int nxt_step = 1;
     for (;nxt_step < path.size(); nxt_step++)
     {

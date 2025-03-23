@@ -5,6 +5,7 @@ using namespace std;
 
 double curyaw;
 double inityaw = 10;
+double hp;
 
 void get_rotate(const ReceiveGimbalInfo& pkg)
 {
@@ -13,6 +14,8 @@ void get_rotate(const ReceiveGimbalInfo& pkg)
         inityaw = pkg.yaw;
     }
     curyaw = pkg.yaw;
+    hp = pkg.hp;
+    // std::cout << hp << std::endl;
 }
 
 pcl::PointXYZ fixRotate(pcl::PointXYZ point)

@@ -46,6 +46,10 @@ void initPCD(pcl::PointCloud<pcl::PointXYZ>::Ptr ptr, int picSize)
     std::cout << 1 / rate << "m per pixel" << std::endl;
 
 }
+int meter2pixel(double meter)
+{
+    return meter * rate;
+}
 
 
 thread_local std::chrono::_V2::system_clock::time_point start_time;

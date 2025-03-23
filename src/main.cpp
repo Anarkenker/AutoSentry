@@ -13,13 +13,19 @@ using namespace cv;
 // int nx = 386;
 // int ny = 581;
 // double theta = -0.318748;
-int nx = 185;
-int ny = 266;
-double theta = 1.62171;
+// int nx = 185;
+// int ny = 266;
+// double theta = 1.62171;
+int nx = 228;
+int ny = 242;
+double theta = 0.0858103;
 
 vector<Point> dest{
-    {362,449},
-    {185,264}};
+    {561,315},
+    {561,496},
+    {316,488},
+    {228,242}
+};
 
 double getfps()
 {
@@ -73,8 +79,13 @@ void endCtrl(int sig)
     exit(0);
 }
 double rotate = 0;
-int main()
+extern bool showImg;
+int main(int argc, char const *argv[])
 {
+    if (argc > 1)
+    {
+        showImg = true;
+    }
     // signal(SIGINT, endCtrl);
     // signal(SIGTERM, endCtrl);
     // signal(SIGSEGV, endCtrl);
@@ -86,12 +97,12 @@ int main()
     // pcl::io::savePCDFileBinaryCompressed("d.pcd", *ptr);
     // return 0;
 
-    // initRoute("../obstacle.png");
-    // initMatch("../scans.pcd", nx, ny, theta);
-    initRoute("../8floor-edit.png");
-    initMatch("../8floor.pcd", nx, ny, theta);
+    initRoute("../812.png");
+    initMatch("../812.pcd", nx, ny, theta);
+    // initRoute("../1floor.png");
+    // initMatch("../1floor.pcd", nx, ny, theta);
     cout << "finish init" << endl;
-
+    // this_thread::sleep_for(5s);
     cout << fixed << setprecision(4);
     auto startTime = chrono::steady_clock::now();
     // resetPointCloud();
@@ -134,7 +145,7 @@ int main()
             setTarget(*curDest);
         }
 
-        continue;
+        // continue;
         static int lstTime = clock();
         int curTime = clock();
         double deltaTime = (curTime - lstTime) * 1. / CLOCKS_PER_SEC;
@@ -146,7 +157,7 @@ int main()
             continue;
         }
 
-        sendControl(ddt, 0.5);
+        sendControl(ddt, 1);
 
         // this_thread::sleep_for(1s);
     }

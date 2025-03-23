@@ -12,3 +12,4 @@ void drawCircle(cv::Mat &img, int x, int y, int r, cv::Vec3b color);
 void initPCD(pcl::PointCloud<pcl::PointXYZ>::Ptr ptr, int picSize);
 std::chrono::_V2::system_clock::time_point clock_start();
 double get_clock_time();
+int meter2pixel(double meter);

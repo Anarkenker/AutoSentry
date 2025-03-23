@@ -23,7 +23,7 @@ void PointCloudCallback(uint32_t handle, const uint8_t dev_type, LivoxLidarEther
 			p.x = p_point_data[i].x / 1000.;
 			p.y = p_point_data[i].y / 1000.;
 			p.z = p_point_data[i].z / 1000.;
-			if (hypot(p.x, p.y) < 0.35)
+			if (hypot(p.x, p.y) < 0.25)
 				continue;
             // p.z = -p.z;
             // p.y = -p.y;
