@@ -7,6 +7,7 @@
 #include "config.h"
 #include "socket_server.hpp"
 #include "logger.h"
+#include "game_status.h"
 
 using namespace std;
 using namespace cv;
@@ -16,16 +17,12 @@ using namespace cv;
 // int nx = 185;
 // int ny = 266;
 // double theta = 1.62171;
-int nx = 228;
-int ny = 242;
-double theta = 0.0858103;
+int nx = 98;
+int ny = 91;
+double theta = 0.;
 
-vector<Point> dest{
-    {561,315},
-    {561,496},
-    {316,488},
-    {228,242}
-};
+Point home = {nx, ny};
+Point center = {475,348};
 
 double getfps()
 {
@@ -108,8 +105,8 @@ int main(int argc, char const *argv[])
     // pcl::io::savePCDFileBinaryCompressed("d.pcd", *ptr);
     // return 0;
 
-    initRoute("../812.png");
-    initMatch("../812.pcd", nx, ny, theta);
+    initRoute("../RMUL.png");
+    initMatch("../RMUL.pcd", nx, ny, theta);
     // initRoute("../1floor.png");
     // initMatch("../1floor.pcd", nx, ny, theta);
     cout << "finish init" << endl;
@@ -118,9 +115,10 @@ int main(int argc, char const *argv[])
     auto startTime = chrono::steady_clock::now();
     // resetPointCloud();
 
-    auto curDest = dest.begin();
-    setTarget(*curDest);
+    
+    setTarget(center);
     thread _{locate};
+    auto curDest = new Point(center);
 
     int stableCnt = 0;
 
@@ -128,7 +126,7 @@ int main(int argc, char const *argv[])
     {
         // startTime += 100ms;
         // this_thread::sleep_until(startTime);
-
+        log_info(hp, start_status);
         log_info(score, x, y, t);
 
         Point start;
@@ -150,15 +148,15 @@ int main(int argc, char const *argv[])
 
         log_info(dis, dt, ddt, getfps(), locateFPS);
         log_new_line();
-        if (dis < .3)
-        {
-            curDest++;
-            if (curDest == dest.end())
-                curDest = dest.begin();
-            setTarget(*curDest);
-        }
 
-        // continue;
+        // sendControl(1, 1);
+        if (!start_status)
+            continue;
+        
+        if (hp < .25)
+            *curDest = home;
+        else if (hp > .9)
+            *curDest = center;
 
         if (score > .1 || isnan(ddt))
         {

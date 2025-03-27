@@ -12,7 +12,7 @@ link_directories(${PCL_LIBRARY_DIRS} ${OpenCV_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 
-add_executable(Main main.cpp)
+add_executable(Main main.cpp tools.cpp)
 # add_executable(Main filter.cpp)
 
 target_link_libraries (Main ${PCL_LIBRARIES} ${OpenCV_LIBS})

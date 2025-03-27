@@ -22,12 +22,13 @@
 #include <pcl/filters/radius_outlier_removal.h>
 #include <bits/stl_function.h>
 
-#include "tools.hpp"
+#include "tools.h"
 
 using namespace std;
 using namespace cv;
 
-constexpr int picSize = 1024;
+constexpr int scale = 4;
+constexpr int picSize = 1024 / scale;
 int pointcnt[picSize][picSize];
 Mat img = Mat::zeros(picSize, picSize, CV_8UC1);
 Mat imgShow = Mat::zeros(picSize, picSize, CV_8UC3);
@@ -38,10 +39,11 @@ void click(int event, int y, int x, int flags, void *userdata)
 {
     if (event == EVENT_LBUTTONDOWN)
     {
-        img.copyTo(imgShow);
+        // img.copyTo(imgShow);
+        cvtColor(img, imgShow, COLOR_GRAY2BGR);
         startP = {x, y};
         endP = nullopt;
-        drawSquare(imgShow, x, y, 3);
+        drawCircle(imgShow, x, y, 3, {0, 0, 255});
 
         imshow("img", imgShow);
 
@@ -54,7 +56,7 @@ void click(int event, int y, int x, int flags, void *userdata)
     else if (event == EVENT_LBUTTONUP)
     {
         endP = {x, y};
-        drawSquare(imgShow, x, y, 5);
+        drawCircle(imgShow, x, y, 5, {0, 255, 0});
         // cout << "x y " << y << ',' << x << endl;
         cout << "theta:" << atan2(y - startP->second,x - startP->first) << endl;
 
@@ -74,13 +76,14 @@ using PointType = pcl::PointXYZ;
 int main(int argc, char **argv)
 {
     pcl::PointCloud<PointType>::Ptr target_cloud(new pcl::PointCloud<PointType>);
-    pcl::io::loadPCDFile<PointType>("../805.pcd", *target_cloud);
+    pcl::io::loadPCDFile<PointType>("../../RMUL.pcd", *target_cloud);
 
-    initPCD(target_cloud->points, picSize);
+    cout << target_cloud->points.size() << endl;
+    initPCD(target_cloud , picSize);
 
     for (auto p : target_cloud->points)
     {
-        if (p.z > 0.5)
+        if (p.z > 1.5)
             continue;
         auto [x, y] = trans(p.x, p.y);
         pointcnt[x][y]++;
@@ -89,11 +92,13 @@ int main(int argc, char **argv)
     for (int i = 0; i < picSize; i++)
         for (int j = 0; j < picSize; j++)
         {
-            if (pointcnt[i][j] < 5)
+            if (pointcnt[i][j] < 3)
                 continue;
 
             img.at<uchar>(i, j) = 0xff;
         }
+    
+    resize(img,img,{},scale,scale,INTER_NEAREST);
     imwrite("../obstacle.png", img);
 
     // {

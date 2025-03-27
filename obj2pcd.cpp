@@ -82,7 +82,7 @@ int main(int argc, char** argv)
     vtkSmartPointer<vtkPolyDataPointSampler> sampler = vtkSmartPointer<vtkPolyDataPointSampler>::New();
     sampler->SetInputData(polyData);
     // 设置采样间距（值越小，采样越密集），根据需要调整此值
-    sampler->SetDistance(25);
+    sampler->SetDistance(50);
     sampler->Update();
 
     vtkSmartPointer<vtkPolyData> sampledPolyData = sampler->GetOutput();
@@ -97,9 +97,9 @@ int main(int argc, char** argv)
         double p[3];
         vtk_points->GetPoint(i, p);
         pcl::PointXYZ point;
-        point.x = static_cast<float>(p[0]);
-        point.y = static_cast<float>(p[1]);
-        point.z = static_cast<float>(p[2]);
+        point.x = static_cast<float>(p[0]) / 1000;
+        point.y = static_cast<float>(p[1]) / 1000;
+        point.z = static_cast<float>(p[2]) / 1000;
         cloud->points.push_back(point);
     }
     cloud->width = static_cast<uint32_t>(cloud->points.size());

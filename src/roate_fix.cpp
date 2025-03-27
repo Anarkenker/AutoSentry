@@ -1,13 +1,14 @@
 #include "roate_fix.h"
+#include "game_status.h"
 #include <iostream>
 using namespace std;
 
 
 double curyaw;
 double inityaw = 10;
-double hp;
 
-void get_rotate(const ReceiveGimbalInfo& pkg)
+
+void get_rotate(const ReceiveNavigationInfo& pkg)
 {
     if (inityaw == 10)
     {
@@ -15,6 +16,7 @@ void get_rotate(const ReceiveGimbalInfo& pkg)
     }
     curyaw = pkg.yaw;
     hp = pkg.hp;
+    start_status = pkg.start;
     // std::cout << hp << std::endl;
 }
 

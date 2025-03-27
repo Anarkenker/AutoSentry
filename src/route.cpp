@@ -101,7 +101,10 @@ vector<Point> astar(Point start, Point end)
             for (int di = -dt; di <= dt; di++)
                 for (int dj = -dt; dj <= dt; dj++)
                 {
-                    if (getObstacleLevel({start.x + di, start.y + dj}) < 255)
+                    Point neighbor = start + Point{di, dj};
+                    if (neighbor.x < 0 || neighbor.x >= picSize || neighbor.y < 0 || neighbor.y >= picSize)
+                        continue;
+                    if (getObstacleLevel(neighbor) < 255)
                     {
                         start.x += di;
                         start.y += dj;
